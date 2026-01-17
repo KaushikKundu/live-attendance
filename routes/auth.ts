@@ -1,7 +1,11 @@
 import { Router } from "express";
-import { signupSchema } from "../types";
-import mongoose from "mongoose";
+import { loginSchema, signupSchema } from "../types";
 import { User } from "../models";
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import { isAuthenticated } from "../middleware";
+
+dotenv.config();
 
 const authRouter = Router();
 
@@ -39,8 +43,71 @@ authRouter.post("/signup", async (req, res) => {
     })
 
 })
-authRouter.post("/login", (req, res) => {
-
+authRouter.post("/login", async (req, res) => {
+    const {success,data} = loginSchema.safeParse(req.body);
+    if(!success){
+        res.status(400).json({
+            success: false,
+            error: "Invalid request schema",
+        })
+        return;
+    }
+    const {email, password} = data;
+    try {
+        const existingUser = await User.findOne({ email, password });
+        if (!existingUser) {
+            res.status(400).json({
+                success: false,
+                error: "Invalid email or password",
+            });
+            return;
+        }
+        const token = jwt.sign(
+            { userId: existingUser._id, role: existingUser.role },
+            process.env.JWT_SECRET || 'DEFAULT_SECRET_KEY'
+        )
+        res.status(200).json({
+            success: true,
+            data: {
+                token,
+            },
+        });
+    }catch (error) {
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
+    }
+      
 });
+authRouter.get("/me",isAuthenticated, async (req, res) => {
+    const userId = req.userId;
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            res.status(404).json({
+                success: false,
+                error: "User not found",
+            });
+            return;
+        }
+         res.status(200).json({
+            success: true,
+            data: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            },
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
+        return;
+    }
+    
+})
 
 export default authRouter;
