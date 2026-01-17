@@ -11,3 +11,6 @@ export const loginSchema = z.object({
     email: z.email(),
     password: z.string().min(4, "Password must be at least 6 characters long")
 })
+export const classSchema = z.object({
+    className: z.string()
+})

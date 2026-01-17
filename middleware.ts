@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import type { Request,Response, NextFunction } from "express";
 type JwtPayload = {
     userId: string;
     role: string;
@@ -19,4 +20,12 @@ export function isAuthenticated(req: any, res: any, next: any) {
         res.status(401).json({ success: false, error: "Unauthorized, token missing or invalid" });
         return;
     }
+}
+
+export function isTeacher(req:Request,res:Response,next:NextFunction){
+    if(req.role !== 'teacher'){
+        res.status(403).json({ success: false, error: "Forbidden, teacher access required" });
+        return;
+    }
+    next();
 }
